@@ -1,4 +1,5 @@
 import sys
+import os.path
 import hashlib
 import ctypes
 _libcrypto = ctypes.CDLL("/usr/lib/x86_64-linux-gnu/libcrypto.so")
@@ -12,15 +13,15 @@ kEY_HANDLE = b"/home/daniel/Documents/build-tpm2/simple-tpm-mutual-tls/python-ha
 # 		self.str = str
 # 		self._as_parameter_ = ctypes.pythonapi.(id(self.str))
 
-def malloc(data, size):
-	buffer = None
-	if data != 0:
-		if sys.version_info.major == 3 and isinstance(data, type('')):
-			data = data.encode()
-			buffer = ctypes.create_string_buffer(data, size)
-		else:
-			buffer = ctypes.create_string_buffer(size)
-	return buffer
+# def malloc(data, size):
+# 	buffer = None
+# 	if data != 0:
+# 		if sys.version_info.major == 3 and isinstance(data, type('')):
+# 			data = data.encode()
+# 			buffer = ctypes.create_string_buffer(data, size)
+# 		else:
+# 			buffer = ctypes.create_string_buffer(size)
+# 	return buffer
 
 def _init():
 
@@ -137,9 +138,9 @@ def rsa_sign_with_key(rsa, filename):
 
 	# outstring = ctypes.cast(outbuf, ctypes.c_char_p)
 	# print(outstring.value)
-	print(lenptr[0])
+	# print(lenptr[0])
 
-	print(base64_len)
+	# print(base64_len)
 	print(ctypes.string_at(base64, base64_len))
 	return base64
 
@@ -167,7 +168,12 @@ def get_hash(file):
 
 
 if __name__ == '__main__':
-
+	if len(sys.argv) < 2:
+		print("Usage: %s [FILE_PATH]" % sys.argv[0])
+		sys.exit(1)
 	# file_hash = get_hash(sys.argv[1])
 	# print(file_hash)
-	sign_hash("testfile")
+	if not os.path.isfile(sys.argv[1]):
+		print("The file, %s is invalid" % sys.argv[1])
+		sys.exit(1)
+	sign_hash(sys.argv[1])
