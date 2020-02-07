@@ -12,7 +12,8 @@
 #include <openssl/engine.h>
 
 #define READ_SIZE 32768
-#define KEY_HANDLE "/home/dwang3/Desktop/tls-tpm/tpm-gen-cert/tpm-client-priv.tss"
+// #define KEY_HANDLE "/home/dwang3/Desktop/tls-tpm/tpm-gen-cert/tpm-client-priv.tss"
+#define KEY_HANDLE "/home/daniel/Documents/build-tpm2/simple-tpm-mutual-tls/python-hash/home-priv.tss"
 
 static int rsa_engine_init(const char *engine_id, ENGINE **pe) {
 	int ret;
@@ -147,7 +148,7 @@ int rsa_sign_with_key(RSA *rsa, char *filename, uint8_t **sigp, uint *sig_len) {
 	(defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x02070000fL)
 	EVP_MD_CTX_cleanup(context);
 #else
-	EVP_MD_CTX_retset(context);
+	EVP_MD_CTX_reset(context);
 #endif
 	fclose(file);
 	EVP_MD_CTX_destroy(context);
@@ -210,12 +211,17 @@ err_rsa:
 int write_to_file(char *originfile, unsigned char *base64, unsigned int size) {
 	int ret;
 	FILE *file;
-	char *sig_filepath, *sign_filename; 
+	char *filepath, *filename;
+	char sign_filename[255] = {0};
 
-	sig_filepath = strdup(originfile);
-	sign_filename = basename(sig_filepath);
-	strncat(sign_filename, ".sig", 4);
-	// printf("%s", sign_filename);
+	filepath = strdup(originfile);
+	if(filepath == NULL){
+		fprintf(stderr, "Failed to duplicate filename (%s)\n", originfile);
+		return 1;
+	}
+	filename = basename(filepath);
+	strncpy(sign_filename, filename, sizeof(filename));
+	strncpy(sign_filename + sizeof(filename), ".sig.base64", sizeof(".sig.base64"));
 
 	file = fopen(sign_filename, "wb");
 	if (!file) {
@@ -227,16 +233,16 @@ int write_to_file(char *originfile, unsigned char *base64, unsigned int size) {
 		fprintf(stderr, "Couldn't write file (%s)\n", sign_filename);
 		goto err_close;
 	}
-	// ret = fwrite("\n", 1, 1, file);
+	ret = fwrite("\n", 1, 1, file);
 
-	free(sig_filepath);
 	fclose(file);
+	free(filepath);
 	return 0;
 
 err_close:
 	fclose(file);
 err_clean:
-	free(sig_filepath);
+	free(filepath);
 	return 1;
 }
 
@@ -276,9 +282,9 @@ int main(int argc, char **argv) {
 			fprintf(stderr, "Couldn't encode signature\n");
 			goto err_clean;
 		}
-		base64[base64_len-1] = '\n';
+		base64[base64_len-1] = '\0';
 		printf("base64: %s\n", base64);
-		ret = write_to_file(argv[1], base64, base64_len);
+		ret = write_to_file(argv[1], base64, base64_len-1);
 		if (!ret) {
 			goto err_clean;
 		}
